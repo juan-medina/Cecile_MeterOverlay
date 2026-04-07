@@ -3,7 +3,7 @@
 --
 
 --if ElvUI its not present, dont use this module
-if not IsAddOnLoaded( "ElvUI" )  then return; end
+if not C_AddOns.IsAddOnLoaded( "ElvUI" )  then return; end
 
 --get the engine and create the module
 local Engine = select(2,...);
@@ -96,7 +96,7 @@ function mod:OnInitialize()
 	mod.datatext = Engine.AddOn:GetModule("datatext");
 	
 	--register in ElvUI
-	mod.ElvDT:RegisterDatatext(L["CONFIG_NAME"], { "PLAYER_ENTERING_WORLD" } , mod.OnEvent, mod.OnUpdate, mod.OnClick,mod.OnEnter,mod.OnLeave);
+	mod.ElvDT:RegisterDatatext(L["CONFIG_NAME"], L["CONFIG_NAME"], { "PLAYER_ENTERING_WORLD" } , mod.OnEvent, mod.OnUpdate, mod.OnClick, mod.OnEnter, mod.OnLeave, L["CONFIG_NAME"]);
 	
 	debug("ElvUI DataText registered");
 	
