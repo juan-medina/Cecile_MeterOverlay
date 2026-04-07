@@ -150,7 +150,7 @@ function mod:OnInitialize()
 	mod.Release = 0;
 
 	--get the version from metadata
-	local versionStr = GetAddOnMetadata(Engine.Name, "Version");
+	local versionStr = C_AddOns.GetAddOnMetadata(Engine.Name, "Version");
 
 	--parse the version
 	if(versionStr) then
@@ -165,7 +165,7 @@ function mod:OnInitialize()
 	end
 
 	--get addon title
-	local title = GetAddOnMetadata(Engine.Name, "Title");
+	local title = C_AddOns.GetAddOnMetadata(Engine.Name, "Title");
 
 	if (title) then
 		mod.Title = title;

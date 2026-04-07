@@ -108,15 +108,17 @@ function mod:DisplayTable(tooltip,mode,repotType,amount)
 				classc = Engine.colors["OTHER"];
 			end
 
-			--calcualte persec values
+			--calcualte persec values, using pre-formatted overrides from C_DamageMeter when available
 			if repotType == Engine.TYPE_DPS then
-				value = mod.meter:FormatNumber(StatsTable[i].damage);
-				vps = mod.meter:FormatNumber(StatsTable[i].dps);
-				percent = (totalsum>0) and (math.floor(1000*StatsTable[i].damage/totalsum)/10) or 0;
+				value = mod.meter:FormatNumber(StatsTable[i].formattedDamage or StatsTable[i].damage);
+				vps = mod.meter:FormatNumber(StatsTable[i].formattedDps or StatsTable[i].dps);
+				local rawDamage = StatsTable[i].damage;
+				percent = (type(rawDamage) == "number" and totalsum>0) and (math.floor(1000*rawDamage/totalsum)/10) or 0;
 			else
-				value = mod.meter:FormatNumber(StatsTable[i].healing);
-				vps = mod.meter:FormatNumber(StatsTable[i].hps);
-				percent = (totalsum>0) and (math.floor(1000*StatsTable[i].healing/totalsum)/10) or 0;
+				value = mod.meter:FormatNumber(StatsTable[i].formattedHealing or StatsTable[i].healing);
+				vps = mod.meter:FormatNumber(StatsTable[i].formattedHps or StatsTable[i].hps);
+				local rawHealing = StatsTable[i].healing;
+				percent = (type(rawHealing) == "number" and totalsum>0) and (math.floor(1000*rawHealing/totalsum)/10) or 0;
 			end
 
 			--add that parcicipant to the tooltip
@@ -195,8 +197,13 @@ function mod:UpdateTextValue()
 			local dataset = Engine.Profile.segment;
 			local format = Engine.Profile.datatext.customformat;
 
-			--get the taged values
-			mod.lastValue = mod.meter:GetValues(dataset,format)
+			--get the taged values (protected — may fail with secret values during combat)
+			local ok, result = pcall(mod.meter.GetValues, mod.meter, dataset, format)
+			if ok and result and not result:find("%[%w+%]") then
+				mod.lastValue = result
+			elseif not mod.lastValue or mod.lastValue:find("%[%w+%]") then
+				mod.lastValue = "0 (0)"
+			end
 		end
 	else
 		mod.lastValue = L["NO_DATA"];
@@ -353,6 +360,10 @@ end
 --format the tooltip
 function mod:FormatTooltip(tooltip)
 
+	if (tooltip == nil) then
+		return
+	end
+
 	tooltip:SetBackdrop({
 		bgFile = nil,
 		edgeFile = nil,
@@ -376,7 +387,6 @@ function mod:FormatTooltip(tooltip)
 		mod:FormatTooltipLine(_G["CMODatatextTooltipTextRight"..i]);
 
 	end
-
 end
 
 --init the datatext
@@ -471,7 +481,7 @@ function mod:OnInitialize()
 		end)
 
 	--our tooltip
-	mod.tooltip = CreateFrame("GameTooltip", "CMODatatextTooltip", UIParent, "GameTooltipTemplate")
+	mod.tooltip = CreateFrame("GameTooltip", "CMODatatextTooltip", UIParent, "GameTooltipTemplate" and "BackdropTemplate")
 
 	--hook for style the tooltipe
 	mod.tooltip:HookScript("OnShow",function (self)

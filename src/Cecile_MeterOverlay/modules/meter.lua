@@ -53,12 +53,17 @@ end
 --event when we engage a boss
 function mod.EngageBoss(...)
 	--get the boss name and store it
-	local victim = UnitName("boss1");
+	local victim = UnitName("boss1")
+
+	--guard against secret values from UnitName during combat (12.0.0+)
+	if issecretvalue and issecretvalue(victim) then
+		victim = nil
+	end
 
 	if victim then
 
 		--get the localized difficult name
-		local name, instanceType, difficultyID, difficultyName, maxPlayers, dynamicDifficulty, isDynamic, instanceMapID = GetInstanceInfo();
+		local name, instanceType, difficultyID, difficultyName, maxPlayers, dynamicDifficulty, isDynamic, instanceMapID = GetInstanceInfo()
 
 		if not difficultyName then
 			difficultyName = ""
@@ -66,10 +71,10 @@ function mod.EngageBoss(...)
 
 		--if we are not in combat the next combat event will set the boss name, ifnot set it now
 		if not mod.combat then
-			mod.NextCombatBoss = victim.." - "..difficultyName;
+			mod.NextCombatBoss = victim.." - "..difficultyName
 		else
 			mod.NextCombatBoss = ""
-			mod.bossName = victim.." - "..difficultyName;
+			mod.bossName = victim.." - "..difficultyName
 		end
 	end
 
@@ -78,28 +83,34 @@ end
 --get the segment name
 function mod.getSegmentName(tablename)
 
-	local result = "";
+	local result = ""
 
 	--if get the current data, if not get the localize segment name
 	if tablename == Engine.CURRENT_DATA then
 
 		--if we have a boss name set it, if not return segment name
-		if mod.bossName and mod.bossName ~= "" then
-			result = mod.bossName;
+		--guard against secret values (12.0.0+): treat secret bossName as empty
+		local bossName = mod.bossName
+		if issecretvalue and issecretvalue(bossName) then
+			bossName = nil
+		end
+
+		if bossName and bossName ~= "" then
+			result = bossName
 		else
-			result = mod.getMeterSegmentName();
+			result = mod.getMeterSegmentName()
 		end
 		--if we do not have a segment name
 		if result == "" then
 			--return just the localized name
-			result = Engine.ConvertDataSet[tablename];
+			result = Engine.ConvertDataSet[tablename]
 		end
 
 	else
-		result = Engine.ConvertDataSet[tablename];
+		result = Engine.ConvertDataSet[tablename]
 	end
 
-	return result;
+	return result
 
 end
 
@@ -180,8 +191,8 @@ end
 
 --set a tag value appending the ordinal of that number
 function mod:SetOrdinalValue(name,value,color)
-
-	mod:SetValue(name,value..Engine:OrdinalSuffix(value),color);
+	if value == nil then value = 0 end
+	mod:SetValue(name,tostring(value)..Engine:OrdinalSuffix(value),color);
 
 end
 
@@ -236,12 +247,12 @@ function mod:ValuePerSecond(tablename, mode)
 		--check if we want the dps o hps data until we found our player data
 		if StatsTable[i].name == mod.myname then
 			if mode == Engine.TYPE_DPS then
-				persec = StatsTable[i].dps;
-				value  = StatsTable[i].damage;
+				persec = StatsTable[i].formattedDps or StatsTable[i].dps;
+				value  = StatsTable[i].formattedDamage or StatsTable[i].damage;
 				mypos = i;
 			else
-				persec = StatsTable[i].hps;
-				value  = StatsTable[i].healing;
+				persec = StatsTable[i].formattedHps or StatsTable[i].hps;
+				value  = StatsTable[i].formattedHealing or StatsTable[i].healing;
 				mypos = i;
 			end
 			break;
@@ -299,19 +310,26 @@ function mod:GetPlayerData(tablename,mode)
 end
 
 -- Formats a number into human readable format
+-- If value is already a string (pre-formatted by meter override), return it as-is
 function mod:FormatNumber(number)
+	if issecretvalue and issecretvalue(number) then
+		local ok, text = pcall(tostring, number)
+		if ok and text then return text end
+		return "?"
+	end
 	if number then
+		if type(number) == "string" then return number; end
 		if number > 1000000 then
 			return 	("%02.2fM"):format(number / 1000000);
 		else
 			if number > 1000 then
 				return 	("%02.1fK"):format(number / 1000);
 			else
-				return math.floor(number);
+				return tostring(math.floor(number));
 			end
 		end
 	else
-		return 0;
+		return "0";
 	end
 end
 
@@ -381,9 +399,13 @@ function mod:PaseString(taged)
 
 		end
 
-		--replace the tag in the result string
+		--replace the tag in the result string (ensure v is a string for gsub)
 		k = "%["..k.."%]";
-		result = string.gsub(result,k,v);
+		local replacementValue = tostring(v or "")
+		local ok, newResult = pcall(string.gsub, result, k, replacementValue)
+		if ok then
+			result = newResult
+		end
 
 	end
 
@@ -400,36 +422,53 @@ end
 --return a formated string for the selected table set
 function mod:GetValues(tablename,taged)
 
-	--get the values from the meter
-	local rdamage,rdps,dps,damage,ndps 		= mod:ValuePerSecond(tablename, Engine.TYPE_DPS);
-	local rhealing,rhps,hps,healing,nhps 	= mod:ValuePerSecond(tablename, Engine.TYPE_HEAL);
+	-- Pre-populate all tags with safe defaults FIRST so they always get replaced
+	-- even if the meter data calls below error out
+	mod:SetValue("dps", "0", Engine.CONFIG_COLOR_DAMAGE)
+	mod:SetValue("rdps", "0", Engine.CONFIG_COLOR_DAMAGE)
+	mod:SetValue("damage", "0", Engine.CONFIG_COLOR_DAMAGE)
+	mod:SetValue("rdamage", "0", Engine.CONFIG_COLOR_DAMAGE)
+	mod:SetValue("pdps", "0", Engine.CONFIG_COLOR_DAMAGE)
+	mod:SetValue("ndps", "0", Engine.CONFIG_COLOR_DAMAGE)
+	mod:SetValue("hps", "0", Engine.CONFIG_COLOR_HEALING)
+	mod:SetValue("rhps", "0", Engine.CONFIG_COLOR_HEALING)
+	mod:SetValue("healing", "0", Engine.CONFIG_COLOR_HEALING)
+	mod:SetValue("rhealing", "0", Engine.CONFIG_COLOR_HEALING)
+	mod:SetValue("pheal", "0", Engine.CONFIG_COLOR_HEALING)
+	mod:SetValue("nhealer", "0", Engine.CONFIG_COLOR_HEALING)
 
-	--calculate % dps
+	--get the values from the meter (protected — may fail with secret values during combat)
+	local ok1, rdamage,rdps,dps,damage,ndps = pcall(mod.ValuePerSecond, mod, tablename, Engine.TYPE_DPS);
+	if not ok1 then rdamage,rdps,dps,damage,ndps = 0,0,0,0,1 end
+	local ok2, rhealing,rhps,hps,healing,nhps = pcall(mod.ValuePerSecond, mod, tablename, Engine.TYPE_HEAL);
+	if not ok2 then rhealing,rhps,hps,healing,nhps = 0,0,0,0,1 end
+
+	--calculate % dps (skip if values are pre-formatted strings from C_DamageMeter)
 	local pdps = 100;
-	if (rdamage~=0) then
+	if type(damage) == "number" and type(rdamage) == "number" and (rdamage~=0) then
 		pdps = math.floor(1000*damage/rdamage)/10;
 	end
 
-	--calculate % heal
+	--calculate % heal (skip if values are pre-formatted strings from C_DamageMeter)
 	local pheal = 100;
-	if (rhealing~=0) then
+	if type(healing) == "number" and type(rhealing) == "number" and (rhealing~=0) then
 		pheal = math.floor(1000*healing/rhealing)/10;
 	end
 
-	--set the tag values
-	mod:SetNumberValue( 	"dps",		dps,		Engine.CONFIG_COLOR_DAMAGE);
-	mod:SetNumberValue( 	"rdps",		rdps,		Engine.CONFIG_COLOR_DAMAGE);
-	mod:SetNumberValue( 	"damage",	damage,		Engine.CONFIG_COLOR_DAMAGE);
-	mod:SetNumberValue( 	"rdamage",	rdamage,	Engine.CONFIG_COLOR_DAMAGE);
-	mod:SetNumberValue( 	"pdps",		pdps,		Engine.CONFIG_COLOR_DAMAGE);
-	mod:SetOrdinalValue(	"ndps",		ndps,		Engine.CONFIG_COLOR_DAMAGE);
+	--set the tag values (protected - any single failure shouldn't prevent others)
+	pcall(mod.SetNumberValue, mod, "dps", dps, Engine.CONFIG_COLOR_DAMAGE)
+	pcall(mod.SetNumberValue, mod, "rdps", rdps, Engine.CONFIG_COLOR_DAMAGE)
+	pcall(mod.SetNumberValue, mod, "damage", damage, Engine.CONFIG_COLOR_DAMAGE)
+	pcall(mod.SetNumberValue, mod, "rdamage", rdamage, Engine.CONFIG_COLOR_DAMAGE)
+	pcall(mod.SetNumberValue, mod, "pdps", pdps, Engine.CONFIG_COLOR_DAMAGE)
+	pcall(mod.SetOrdinalValue, mod, "ndps", ndps, Engine.CONFIG_COLOR_DAMAGE)
 
-	mod:SetNumberValue(		"hps",		hps,		Engine.CONFIG_COLOR_HEALING);
-	mod:SetNumberValue(		"rhps",		rhps,		Engine.CONFIG_COLOR_HEALING);
-	mod:SetNumberValue(		"healing",	healing,	Engine.CONFIG_COLOR_HEALING);
-	mod:SetNumberValue(		"rhealing",	rhealing,	Engine.CONFIG_COLOR_HEALING);
-	mod:SetNumberValue(		"pheal",	pheal,		Engine.CONFIG_COLOR_HEALING);
-	mod:SetOrdinalValue(	"nhealer",	nhps,		Engine.CONFIG_COLOR_HEALING);
+	pcall(mod.SetNumberValue, mod, "hps", hps, Engine.CONFIG_COLOR_HEALING)
+	pcall(mod.SetNumberValue, mod, "rhps", rhps, Engine.CONFIG_COLOR_HEALING)
+	pcall(mod.SetNumberValue, mod, "healing", healing, Engine.CONFIG_COLOR_HEALING)
+	pcall(mod.SetNumberValue, mod, "rhealing", rhealing, Engine.CONFIG_COLOR_HEALING)
+	pcall(mod.SetNumberValue, mod, "pheal", pheal, Engine.CONFIG_COLOR_HEALING)
+	pcall(mod.SetOrdinalValue, mod, "nhealer", nhps, Engine.CONFIG_COLOR_HEALING)
 
 	--return the string
 	return mod:PaseString(taged);

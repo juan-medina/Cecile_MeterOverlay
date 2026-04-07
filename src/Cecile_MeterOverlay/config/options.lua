@@ -228,7 +228,7 @@ Engine.Options = {
       order = 0,
       type = "description",
       fontSize = "large",
-      name = string.format(L["CONFIG_WINDOW"],GetAddOnMetadata(AddOnName, "Title"),GetAddOnMetadata(AddOnName, "Version"))
+      name = string.format(L["CONFIG_WINDOW"],C_AddOns.GetAddOnMetadata(AddOnName, "Title"),C_AddOns.GetAddOnMetadata(AddOnName, "Version"))
     },
     Header = {
       order = 1,
@@ -984,7 +984,7 @@ Engine.Options = {
 
 -- Interface - Addons (Ace3 Blizzard Options)
 Engine.blizzardOptions = {
-  name = string.format(L["CONFIG_WINDOW"],GetAddOnMetadata(AddOnName, "Title"),GetAddOnMetadata(AddOnName, "Version")),
+  name = string.format(L["CONFIG_WINDOW"],C_AddOns.GetAddOnMetadata(AddOnName, "Title"),C_AddOns.GetAddOnMetadata(AddOnName, "Version")),
   handler = x,
   type = 'group',
   args = {

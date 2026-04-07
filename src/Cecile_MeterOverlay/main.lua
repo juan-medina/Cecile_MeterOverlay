@@ -27,7 +27,8 @@ function AddOn:PLAYER_ENTERING_WORLD()
 	--get version
 	local Version = AddOn:GetModule("version");
 	
-	print(string.format(L["LOAD_MESSAGE"],Version.Title,Version.Label,Engine.slash1,Engine.slash2));
+	-- TODO:  This broke with 11.0.2 (due to Ace addon not being updated yet?)   We don't really need it, so going to disable it for now.
+	--print(string.format(L["LOAD_MESSAGE"],Version.Title,Version.Label,Engine.slash1,Engine.slash2));
 	
 	self:UnregisterEvent("PLAYER_ENTERING_WORLD");
 end

@@ -45,7 +45,7 @@ function mod:OnInitialize()
   --main window
   frame:EnableMouse();
 
-  frame:SetMinResize(300, 100);
+  frame:SetResizeBounds(300, 100);
   frame:SetWidth(400);
   frame:SetHeight(400);
 
