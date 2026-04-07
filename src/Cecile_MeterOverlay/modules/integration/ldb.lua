@@ -3,10 +3,10 @@
 --
 
 --if Tukui its present, dont use this module
-if IsAddOnLoaded( "Tukui" )  then return; end
+if C_AddOns.IsAddOnLoaded( "Tukui" )  then return; end
 
 --if ElvUI its present, dont use this module
-if IsAddOnLoaded( "ElvUI" )  then return; end
+if C_AddOns.IsAddOnLoaded( "ElvUI" )  then return; end
 
 --get the engine and create the module
 local Engine = select(2,...);

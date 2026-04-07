@@ -3,7 +3,7 @@
 --
 
 --if DBM its not present, dont use this module
-if not IsAddOnLoaded( "DBM-Core" )  then return; end
+if not C_AddOns.IsAddOnLoaded( "DBM-Core" )  then return; end
 
 --get the engine and create the module
 local Engine = select(2,...);

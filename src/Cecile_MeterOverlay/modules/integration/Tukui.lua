@@ -3,7 +3,7 @@
 --
 
 --if Tukui its not present, dont use this module
-if not IsAddOnLoaded( "Tukui" )  then return; end
+if not C_AddOns.IsAddOnLoaded( "Tukui" )  then return; end
 
 --get the engine and create the module
 local Engine = select(2,...);

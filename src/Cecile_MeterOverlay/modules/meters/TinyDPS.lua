@@ -3,7 +3,7 @@
 --
 
 --if TinyDPS its not present, dont use this module
-if not IsAddOnLoaded( "TinyDPS" )  then return; end
+if not C_AddOns.IsAddOnLoaded( "TinyDPS" )  then return; end
 
 --get the engine and create the module
 local Engine = select(2,...);
