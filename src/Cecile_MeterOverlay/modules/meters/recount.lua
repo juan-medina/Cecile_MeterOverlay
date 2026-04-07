@@ -3,11 +3,14 @@
 --
 
 --if Recount its not present, dont use this module
-if not IsAddOnLoaded( "Recount" )  then return; end
+if not C_AddOns.IsAddOnLoaded( "Recount" )  then return; end
 
 --get the engine and create the module
 local Engine = select(2,...);
 local mod = Engine.AddOn:NewModule("recount");
+
+--proxy name prefix used by Recount's C_DamageMeter integration (12.0+)
+local PROXY_PREFIX = "__RECOUNT_DM__";
 
 --debug
 local debug = Engine.AddOn:GetModule("debug");
@@ -71,45 +74,70 @@ function mod.GetSumtable(dataset, mode)
 	local temptable = {};
 	local sumtable = {};
 	
+	--check if we are in C_DamageMeter combat mode (Recount 12.0+)
+	local useDamageMeter = Recount.UseDamageMeter and Recount.InCombat;
+	local hasOverride = useDamageMeter and Recount.GetMainWindowBarTextOverride;
+
 	--get trought all the partincipans
 	for _,data in pairs(Recount.db2.combatants) do
-		if data.Fights and data.Fights[tablename] and (data.type=="Self" or data.type=="Grouped" or data.type=="Pet" or data.type=="Ungrouped") then
-			
-			--merge the pets
-			if mode == Engine.TYPE_DPS then
-				cursum,curpersec = Recount:MergedPetDamageDPS(data,tablename);
-			elseif mode == Engine.TYPE_HEAL then
-				cursum,curpersec = Recount:MergedPetHealingDPS(data,tablename);
-			end
-			--only calculate non pets data
-			if data.type ~= "Pet" or (not Recount.db.profile.MergePets and data.Owner and (Recount.db2.combatants[data.Owner].type=="Self" or 
-				Recount.db2.combatants[data.Owner].type=="Grouped" or Recount.db2.combatants[data.Owner].type=="Ungrouped")) or 
-				(not Recount.db.profile.MergePets and data.Name and data.GUID and mod:matchUnitGUID(Recount,data.Name, data.GUID)) then
-				
-				--if we have data
-				if cursum > 0 then
-				
-					--caculate persec and values
-					totalsum = totalsum + cursum;
-					curpersec = math.floor(curpersec + 0.5);
-					totalpersec = totalpersec + curpersec;
-					
-					--get the name
-					fullname = data.Name or _G["UNKNOWN"];
-					if data.type == "Pet" then fullname = data.Name.." <"..data.Owner..">" end;
-					
-					--set the data in the temp table
-					if mode == Engine.TYPE_DPS then
-						temptable = {name = fullname, damage = cursum, dps = curpersec, enclass = data.enClass};
-					elseif mode == Engine.TYPE_HEAL then
-						temptable = {name = fullname, healing = cursum, hps = curpersec, enclass = data.enClass};
+
+		--skip proxy combatants from C_DamageMeter (unresolved placeholder names)
+		if not (data.Name and data.Name:sub(1, #PROXY_PREFIX) == PROXY_PREFIX) then
+
+			if data.Fights and data.Fights[tablename] and (data.type=="Self" or data.type=="Grouped" or data.type=="Pet" or data.type=="Ungrouped") then
+
+				--merge the pets
+				if mode == Engine.TYPE_DPS then
+					cursum,curpersec = Recount:MergedPetDamageDPS(data,tablename);
+				elseif mode == Engine.TYPE_HEAL then
+					cursum,curpersec = Recount:MergedPetHealingDPS(data,tablename);
+				end
+				--only calculate non pets data
+				if data.type ~= "Pet" or (not Recount.db.profile.MergePets and data.Owner and (Recount.db2.combatants[data.Owner].type=="Self" or
+					Recount.db2.combatants[data.Owner].type=="Grouped" or Recount.db2.combatants[data.Owner].type=="Ungrouped")) or
+					(not Recount.db.profile.MergePets and data.Name and data.GUID and mod:matchUnitGUID(Recount,data.Name, data.GUID)) then
+
+					--if we have data
+					if cursum > 0 then
+
+						--caculate persec and values
+						totalsum = totalsum + cursum;
+						curpersec = math.floor(curpersec + 0.5);
+						totalpersec = totalpersec + curpersec;
+
+						--get the name
+						fullname = data.Name or _G["UNKNOWN"];
+						if data.type == "Pet" then fullname = data.Name.." <"..data.Owner..">" end;
+
+						--set the data in the temp table
+						if mode == Engine.TYPE_DPS then
+							temptable = {name = fullname, damage = cursum, dps = curpersec, enclass = data.enClass};
+						elseif mode == Engine.TYPE_HEAL then
+							temptable = {name = fullname, healing = cursum, hps = curpersec, enclass = data.enClass};
+						end
+
+						--during C_DamageMeter combat, get real formatted values from Recount overrides
+						if hasOverride then
+							if mode == Engine.TYPE_DPS then
+								local ok, valText = pcall(Recount.GetMainWindowBarTextOverride, Recount, fullname, 1);
+								if ok and valText then temptable.formattedDamage = valText; end
+								local ok2, dpsText = pcall(Recount.GetMainWindowBarTextOverride, Recount, fullname, 2);
+								if ok2 and dpsText then temptable.formattedDps = dpsText; end
+							else
+								local ok, valText = pcall(Recount.GetMainWindowBarTextOverride, Recount, fullname, 4);
+								if ok and valText then temptable.formattedHealing = valText; end
+								local ok2, hpsText = pcall(Recount.GetMainWindowBarTextOverride, Recount, fullname, 5);
+								if ok2 and hpsText then temptable.formattedHps = hpsText; end
+							end
+						end
+
+						--insert the player
+						tinsert(sumtable, temptable);
 					end
-					
-					--insert the player
-					tinsert(sumtable, temptable);
 				end
 			end
-		end
+
+		end -- proxy filter
 	end
 	
 	--return the valuesz
