@@ -1,18 +1,12 @@
-tag 86a0d38e50b44b34c45fae4d9e00e8822b48b1d5 v1.16
+tag 68abd684cb5cbcc110bfad34826f75824f66cbc5 v1.22.2
 Author:	Kyle Buller <bullerk@gmail.com>
-Date:	Sun Oct 18 11:14:43 2020 -0500
+Date:	Wed Aug 2 23:45:11 2023 -0500
 
-Tagging as v1.16
+Tagging as v1.22.2
 
-commit da9763c90430bf561918166e3436e62eaa0369b6
+commit 3cb127ea2b1e0c4ce2cfef70b295a56112cd382f
 Author: Kyle Buller <bullerk@gmail.com>
-Date:   Sun Oct 18 10:56:05 2020 -0500
+Date:   Wed Aug 2 23:43:46 2023 -0500
 
-    Always show the config options
-
-commit 044c32eb446e6e4d8b0779511fbc37c5475b7aa5
-Author: Kyle Buller <bullerk@gmail.com>
-Date:   Wed Oct 14 02:10:18 2020 -0500
-
-    Update TOC for 9.0.1
+    Update TOC for 10.1.5 and 3.4.2
 
