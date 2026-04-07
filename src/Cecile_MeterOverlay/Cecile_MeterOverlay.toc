@@ -2,7 +2,7 @@
 ## Title: |cffffffffCecile|r_|cfffff569MeterOverlay|r
 ## Notes: Display your damage meter as overlay
 ## Author: Cecile, shadowphoenix (Details support), ckaotik (Numeration support), Amadeus (maintainer since 1.2.2)
-## Version: 1.2.6
+## Version: 1.2.7
 ## SavedVariables: Cecile_MeterOverlayDB
 ## OptionalDeps: ElvUI,Tukui,Skada,Recount,TinyDPS,DBM-Core,BigWigs,Details,Numeration
 
